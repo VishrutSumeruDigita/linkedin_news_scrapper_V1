@@ -1,0 +1,28 @@
+url - https://mail.hostinger.com/
+Email id - int.vishrut@sumerudigital.com
+Password -Vishrut##2025
+
+# --- MySQL
+MYSQL_URL=mysql+pymysql://root:root@mysql:3306/leads
+
+# --- OpenAI
+OPENAI_API_KEY=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
+MODEL=gpt-4o
+
+# --- Gmail (App password recommended)
+EMAIL_ID=raj.zp108@gmail.com
+EMAIL_PASSWORD=luir cezk upmq zprs  # Replace with your app password
+
+# --- LinkedIn creds
+LI_EMAIL=touka.taiga14@gmail.com
+LI_PASS=Touka.taiga@321
+LI_KEYWORD=CTO blockchain
+
+# --- Selenium hub
+SELENIUM_URL=http://selenium:4444/wd/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
+
+
+
+
+
+
