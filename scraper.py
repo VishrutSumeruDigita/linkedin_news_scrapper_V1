@@ -51,6 +51,14 @@ def configure_chrome_options():
     options.add_experimental_option("excludeSwitches", ["enable-automation"])
     options.add_experimental_option("useAutomationExtension", False)
     
+    # Add version compatibility options
+    options.add_argument("--remote-debugging-port=9222")
+    
+    # Special option for ChromeDriver version mismatch
+    options.add_experimental_option("excludeSwitches", ["enable-logging"])
+    options.add_argument("--log-level=3")
+    options.add_argument("--silent")
+    
     # Randomized user agent (use a recent Chrome version)
     user_agents = [
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36",
@@ -102,10 +110,16 @@ def linkedin_login():
         try:
             # Initialize WebDriver with explicit error handling
             try:
-                # For Docker environment, use direct ChromeDriver path
+                # For Docker environment, use direct ChromeDriver path with version mismatch workarounds
                 if os.path.exists('/usr/local/bin/chromedriver'):
-                    driver = webdriver.Chrome(options=options)
+                    logger.info("Using ChromeDriver from /usr/local/bin/chromedriver")
+                    service = Service('/usr/local/bin/chromedriver')
+                    # Add version compatibility flag
+                    service.service_args = ['--verbose', '--disable-dev-shm-usage']
+                    # Create the driver with version compatibility
+                    driver = webdriver.Chrome(service=service, options=options)
                 else:
+                    logger.info("Using ChromeDriverManager to get ChromeDriver")
                     service = Service(ChromeDriverManager().install())
                     driver = webdriver.Chrome(service=service, options=options)
                 
@@ -126,9 +140,12 @@ def linkedin_login():
                     };
                 }
                 """
-                driver.execute_cdp_cmd("Page.addScriptToEvaluateOnNewDocument", {
-                    "source": stealth_js
-                })
+                try:
+                    driver.execute_cdp_cmd("Page.addScriptToEvaluateOnNewDocument", {
+                        "source": stealth_js
+                    })
+                except Exception as e:
+                    logger.warning(f"CDP command failed, but continuing: {str(e)}")
                 
                 logger.info("WebDriver initialized successfully")
             except Exception as e:
@@ -170,7 +187,10 @@ def linkedin_login():
                     raise Exception("LinkedIn credentials not found in environment variables")
                 
                 # Take screenshot before login attempt (for debugging)
-                driver.save_screenshot("before_login.png")
+                try:
+                    driver.save_screenshot("before_login.png")
+                except Exception as ss_err:
+                    logger.warning(f"Screenshot failed, but continuing: {str(ss_err)}")
                 
                 # Enter credentials with human-like typing
                 email_field = driver.find_element(By.ID, "username")
@@ -208,14 +228,20 @@ def linkedin_login():
                     )
                     
                     # Take screenshot after login (for debugging)
-                    driver.save_screenshot("after_login.png")
+                    try:
+                        driver.save_screenshot("after_login.png")
+                    except Exception as ss_err:
+                        logger.warning(f"Screenshot failed, but continuing: {str(ss_err)}")
                     
                     # Check for login issues
                     current_url = driver.current_url.lower()
                     
                     if any(x in current_url for x in ["checkpoint", "challenge"]):
                         logger.warning("LinkedIn security checkpoint detected")
-                        driver.save_screenshot("linkedin_checkpoint.png")
+                        try:
+                            driver.save_screenshot("linkedin_checkpoint.png")
+                        except Exception:
+                            pass
                         raise Exception("LinkedIn security checkpoint detected - manual verification required")
                     
                     if "login-submit" in current_url:
@@ -232,11 +258,17 @@ def linkedin_login():
                         return driver
                     
                     # Unknown redirect
-                    driver.save_screenshot("unknown_redirect.png")
+                    try:
+                        driver.save_screenshot("unknown_redirect.png")
+                    except Exception:
+                        pass
                     raise Exception(f"Unknown redirect after login: {current_url}")
                     
                 except TimeoutException:
-                    driver.save_screenshot("login_timeout.png")
+                    try:
+                        driver.save_screenshot("login_timeout.png")
+                    except Exception:
+                        pass
                     logger.warning(f"Login timeout on attempt {retry_count + 1} of {max_retries}")
                     if retry_count < max_retries - 1:
                         retry_count += 1
@@ -246,12 +278,18 @@ def linkedin_login():
                         raise Exception("Login timeout - LinkedIn may be blocking automated logins")
                     
             except NoSuchElementException as e:
-                driver.save_screenshot("missing_element.png")
+                try:
+                    driver.save_screenshot("missing_element.png")
+                except Exception:
+                    pass
                 raise Exception(f"Could not find login page elements: {str(e)}")
                 
         except WebDriverException as e:
             if 'driver' in locals():
-                driver.save_screenshot(f"webdriver_error_{retry_count}.png")
+                try:
+                    driver.save_screenshot(f"webdriver_error_{retry_count}.png")
+                except Exception:
+                    pass
                 driver.quit()
             
             logger.warning(f"WebDriver error on attempt {retry_count + 1}: {str(e)}")
@@ -264,7 +302,10 @@ def linkedin_login():
                 
         except Exception as e:
             if 'driver' in locals():
-                driver.save_screenshot(f"login_error_{retry_count}.png")
+                try:
+                    driver.save_screenshot(f"login_error_{retry_count}.png")
+                except Exception:
+                    pass
                 driver.quit()
             
             logger.warning(f"Error on attempt {retry_count + 1}: {str(e)}")
