@@ -33,6 +33,73 @@ This tool uses completely free methods to find email addresses:
 3. **GitHub Integration**: Searches GitHub for public emails associated with the profile name
 4. **Intelligent Fallbacks**: Uses most common patterns when other methods fail
 
+## Docker Commands
+
+### Quick Start
+
+```bash
+# Build the Docker image
+docker build -t linkedin-scraper .
+
+# Run the container
+docker run -p 8501:8501 --env-file .env -d linkedin-scraper
+```
+
+### Additional Docker Commands
+
+```bash
+# Check running containers
+docker ps
+
+# View container logs
+docker logs [CONTAINER_ID]
+
+# Stop running container
+docker stop [CONTAINER_ID]
+
+# Remove container
+docker rm [CONTAINER_ID]
+
+# Build with a specific tag
+docker build -t linkedin-scraper:latest .
+
+# Build with a custom tag (e.g., for versions)
+docker build -t linkedin-scraper:v1.2 .
+
+# Run with a specific tag
+docker run -p 8501:8501 --env-file .env -d linkedin-scraper:v1.2
+
+# Rebuild and restart in one command
+docker stop $(docker ps -q) || true && docker build -t linkedin-scraper:latest . && docker run -p 8501:8501 --env-file .env -d linkedin-scraper:latest
+```
+
+### Using Docker Compose
+
+Create a `docker-compose.yml` file:
+
+```yaml
+version: '3'
+services:
+  linkedin-scraper:
+    build:
+      context: .
+    restart: unless-stopped
+    ports:
+      - "8501:8501"
+    env_file:
+      - .env
+```
+
+Then run:
+
+```bash
+# Start with docker-compose
+docker-compose up -d
+
+# Stop with docker-compose
+docker-compose down
+```
+
 ## Installation
 
 ### Using Docker (Recommended)
@@ -86,6 +153,9 @@ LINKEDIN_PASSWORD=your_linkedin_password
 # Optional: For email sending capability
 SMTP_EMAIL=your_email@gmail.com
 SMTP_PASSWORD=your_email_password
+
+# Proxycurl API Key (Optional but recommended)
+PROXYCURL_API_KEY=your_proxycurl_api_key
 ```
 
 ## Usage
